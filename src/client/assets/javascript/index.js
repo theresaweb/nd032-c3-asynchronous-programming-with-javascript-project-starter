@@ -85,7 +85,7 @@ async function handleCreateRace() {
 	const track_id = store.track_id
 	// const race = TODO - invoke the API call to create the race, then save the result
 	const race = await createRace(player_id, track_id)
-	console.log("race",race)
+	console.log("step 1: create race", race)
 	// TODO - update the store with the race id
 	store.race_id = race.ID
 	// The race has been created, now start the countdown
@@ -98,23 +98,40 @@ async function handleCreateRace() {
 }
 
 function runRace(raceID) {
-	return new Promise(resolve => {
-	// TODO - use Javascript's built in setInterval method to get race info every 500ms
+	console.log("step 4: run the race - there seems to be an issue with this api as well")
+	try {
+		return new Promise(resolve => {
+		// TODO - use Javascript's built in setInterval method to get race info every 500ms
+		const getRaceInfo = () => {
+			getRace(raceID)
+				.then(race => {
+					if (race.status === 'in-progress') {
+						renderAt('#leaderBoard', raceProgress(race.positions))
+					}
+					if (race.status === 'finished') {
+						renderAt('#race', resultsView(race.positions))
+						resolve(clearInterval(raceInterval))
+					}
+				})
+			}
+		const raceInterval = setInterval(	getRaceInfo, 500)
+		/*
+			TODO - if the race info status property is "in-progress", update the leaderboard by calling:
 
-	/*
-		TODO - if the race info status property is "in-progress", update the leaderboard by calling:
+			renderAt('#leaderBoard', raceProgress(res.positions))
+		*/
 
-		renderAt('#leaderBoard', raceProgress(res.positions))
-	*/
+		/*
+			TODO - if the race info status property is "finished", run the following:
 
-	/*
-		TODO - if the race info status property is "finished", run the following:
-
-		clearInterval(raceInterval) // to stop the interval from repeating
-		renderAt('#race', resultsView(res.positions)) // to render the results view
-		reslove(res) // resolve the promise
-	*/
-	})
+			clearInterval(raceInterval) // to stop the interval from repeating
+			renderAt('#race', resultsView(res.positions)) // to render the results view
+			reslove(res) // resolve the promise
+		*/
+		})
+} catch(error) {
+	console.error("error in runRace",error)
+}
 	// remember to add error handling for the Promise
 }
 
@@ -126,6 +143,7 @@ async function runCountdown() {
 
 		return new Promise(resolve => {
 			const updateCounter = () => {
+				console.log("step 2: counting down from 3")
 				--timer
 				// TODO - if the countdown is done, clear the interval, resolve the promise, and return
 				if (timer === 0) {
@@ -176,9 +194,10 @@ function handleSelectTrack(target) {
 
 }
 
-function handleAccelerate() {
+async function handleAccelerate() {
 	console.log("accelerate button clicked")
 	// TODO - Invoke the API call to accelerate
+	await accelerate(store.race_id)
 }
 
 // HTML VIEWS ------------------------------------------------
@@ -247,8 +266,6 @@ function renderCountdown(count) {
 }
 
 function renderRaceStartView(track, racers) {
-	console.log("track",track)
-	console.log("racers",racers)
 	return `
 		<header>
 			<h1>Race: ${track.name}</h1>
@@ -283,6 +300,7 @@ function resultsView(positions) {
 }
 
 function raceProgress(positions) {
+	return
 	let userPlayer = positions.find(e => e.id === store.player_id)
 	userPlayer.driver_name += " (you)"
 
@@ -365,19 +383,36 @@ function createRace(player_id, track_id) {
 
 function getRace(id) {
 	// GET request to `${SERVER}/api/races/${id}`
+	console.log("step 4a: getRace - run the race - attempting reducing id by 1 but results seem spotty")
+	const bugfixID = id - 1
+	return fetch(`${SERVER}/api/races/${bugfixID}`)
+		.then(response => response.json())
+		.catch(error => console.log(error))
 }
 
 function startRace(id) {
-	return fetch(`${SERVER}/api/races/${id}/start`, {
+	console.log("step 3: start the race - there is a problem here with the api")
+	console.log("step 3: start the race - attempting reducing id by 1 but results seem spotty")
+	const bugfixID = id - 1
+	//https://knowledge.udacity.com/questions/357528
+	return fetch(`${SERVER}/api/races/${bugfixID}/start`, {
 		method: 'POST',
 		...defaultFetchOpts(),
 	})
 	.then(res => res.json())
-	.catch(err => console.log("Problem with getRace request::", err))
+	.catch(err => console.log("Problem with startRace request::", err))
 }
 
 function accelerate(id) {
 	// POST request to `${SERVER}/api/races/${id}/accelerate`
 	// options parameter provided as defaultFetchOpts
 	// no body or datatype needed for this request
+	const bugfixID = id - 1
+	//https://knowledge.udacity.com/questions/357528
+	return fetch(`${SERVER}/api/races/${bugfixID}/accelerate`, {
+		method: 'POST',
+		...defaultFetchOpts(),
+	})
+	.then(res => res.json())
+	.catch(err => console.log("Problem with accelerate request::", err))
 }
