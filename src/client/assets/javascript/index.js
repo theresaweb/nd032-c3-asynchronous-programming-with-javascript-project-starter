@@ -1,7 +1,7 @@
 // PROVIDED CODE BELOW (LINES 1 - 80) DO NOT REMOVE
 
 // The store will hold all information needed globally
-var store = {
+let store = {
 	track_id: undefined,
 	player_id: undefined,
 	race_id: undefined,
@@ -20,15 +20,16 @@ async function onPageLoad() {
 				const html = renderTrackCards(tracks)
 				renderAt('#tracks', html)
 			})
+			.catch(err => console.error(err))
 
 		getRacers()
 			.then((racers) => {
 				const html = renderRacerCars(racers)
 				renderAt('#racers', html)
 			})
+			.catch(err => console.error(err))
 	} catch(error) {
-		console.log("Problem getting tracks and racers ::", error.message)
-		console.error(error)
+		console.error("Problem getting tracks and racers ::",error)
 	}
 }
 
@@ -66,8 +67,7 @@ async function delay(ms) {
 	try {
 		return await new Promise(resolve => setTimeout(resolve, ms));
 	} catch(error) {
-		console.log("an error shouldn't be possible here")
-		console.log(error)
+		console.error(error)
 	}
 }
 // ^ PROVIDED CODE ^ DO NOT REMOVE
@@ -75,30 +75,32 @@ async function delay(ms) {
 // This async function controls the flow of the race, add the logic and error handling
 async function handleCreateRace() {
 	// render starting UI
-	try {
-		renderAt('#race', renderRaceStartView(store.track_id))
-	} catch(e) {
-		alert("Select a track and racer")
+	if(!store.track_id || !store.player_id) {
+	  alert(`Select a track and racer`);
+	  return;
 	}
+	renderAt('#race', renderRaceStartView(store.track_id))
 	// TODO - Get player_id and track_id from the store
 	const player_id = store.player_id
 	const track_id = store.track_id
 	// const race = TODO - invoke the API call to create the race, then save the result
-	const race = await createRace(player_id, track_id)
-	console.log("step 1: create race", race)
-	// TODO - update the store with the race id
-	store.race_id = race.ID
-	// The race has been created, now start the countdown
-	// TODO - call the async function runCountdown
-  await runCountdown()
-	// TODO - call the async function startRace
-  await startRace(store.race_id)
-	// TODO - call the async function runRace
-	await runRace(store.race_id)
+	try {
+		const race = await createRace(player_id, track_id)
+		// TODO - update the store with the race id
+		store.race_id = parseInt(race.ID) - 1
+		// The race has been created, now start the countdown
+		// TODO - call the async function runCountdown
+		await runCountdown()
+		// TODO - call the async function startRace
+		await startRace(store.race_id)
+		// TODO - call the async function runRace
+		await runRace(store.race_id)
+	} catch(e) {
+  	console.error(e);
+  }
 }
 
 function runRace(raceID) {
-	console.log("step 4: run the race - there seems to be an issue with this api as well")
 	try {
 		return new Promise(resolve => {
 		// TODO - use Javascript's built in setInterval method to get race info every 500ms
@@ -113,6 +115,7 @@ function runRace(raceID) {
 						resolve(clearInterval(raceInterval))
 					}
 				})
+				.catch(err => console.error("Error in runRace", err))
 			}
 		const raceInterval = setInterval(	getRaceInfo, 500)
 		/*
@@ -143,7 +146,6 @@ async function runCountdown() {
 
 		return new Promise(resolve => {
 			const updateCounter = () => {
-				console.log("step 2: counting down from 3")
 				--timer
 				// TODO - if the countdown is done, clear the interval, resolve the promise, and return
 				if (timer === 0) {
@@ -157,47 +159,43 @@ async function runCountdown() {
 
 		})
 	} catch(error) {
-		console.log(error);
+		console.error("Error in runCountdown", error);
 	}
 }
 
 function handleSelectPodRacer(target) {
-	console.log("selected a podracer", target.id)
-
 	// remove class selected from all racer options
 	const selected = document.querySelector('#racers .selected')
 	if(selected) {
 		selected.classList.remove('selected')
 	}
-
 	// add class selected to current target
 	target.classList.add('selected')
-
 	// TODO - save the selected racer to the store
-	store.player_id = target.id // ? player_id or race_id ?
+	store.player_id = parseInt(target.id)
 }
 
 function handleSelectTrack(target) {
-	console.log("selected a track", target.id)
-
 	// remove class selected from all track options
 	const selected = document.querySelector('#tracks .selected')
 	if(selected) {
 		selected.classList.remove('selected')
 	}
-
 	// add class selected to current target
 	target.classList.add('selected')
-
 	// TODO - save the selected track id to the store
-	store.track_id = target.id
+	store.track_id = parseInt(target.id)
 
 }
 
 async function handleAccelerate() {
-	console.log("accelerate button clicked")
 	// TODO - Invoke the API call to accelerate
-	await accelerate(store.race_id)
+	try {
+		await accelerate(store.race_id)
+	} catch(err) {
+		console.error(err)
+	}
+
 }
 
 // HTML VIEWS ------------------------------------------------
@@ -300,23 +298,16 @@ function resultsView(positions) {
 }
 
 function raceProgress(positions) {
-	return
-	let userPlayer = positions.find(e => e.id === store.player_id)
-	userPlayer.driver_name += " (you)"
+	let userPlayer = positions.find(e => e.id === parseInt(store.player_id))
 
 	positions = positions.sort((a, b) => (a.segment > b.segment) ? -1 : 1)
 	let count = 1
 
 	const results = positions.map(p => {
 		return `
-			<tr>
-				<td>
-					<h3>${count++} - ${p.driver_name}</h3>
-				</td>
-			</tr>
+			<h3>${count++} - ${p.driver_name}</h3>
 		`
-	})
-
+	}).join('')
 	return `
 		<main>
 			<h3>Leaderboard</h3>
@@ -354,16 +345,20 @@ function defaultFetchOpts() {
 
 const getTracks = () => {
 	// GET request to `${SERVER}/api/tracks`
-	return fetch(`${SERVER}/api/tracks`)
+	return fetch(`${SERVER}/api/tracks`,{
+        ...defaultFetchOpts(),
+    })
 		.then(response => response.json())
-		.catch(error => console.log(error))
+		.catch(error => console.error("Error in getTracks", error))
 }
 
 const getRacers = () => {
 	// GET request to `${SERVER}/api/cars`
-	return fetch(`${SERVER}/api/cars`)
+	return fetch(`${SERVER}/api/cars`,{
+        ...defaultFetchOpts(),
+    })
 		.then(response => response.json())
-		.catch(error => console.log(error))
+		.catch(error => console.error("Error in getRacers", error))
 }
 
 function createRace(player_id, track_id) {
@@ -378,41 +373,35 @@ function createRace(player_id, track_id) {
 		body: JSON.stringify(body)
 	})
 	.then(res => res.json())
-	.catch(err => console.log("Problem with createRace request::", err))
+	.catch(err => console.error("Problem with createRace request::", err))
 }
 
 function getRace(id) {
 	// GET request to `${SERVER}/api/races/${id}`
-	console.log("step 4a: getRace - run the race - attempting reducing id by 1 but results seem spotty")
-	const bugfixID = id - 1
-	return fetch(`${SERVER}/api/races/${bugfixID}`)
+	return fetch(`${SERVER}/api/races/${id}`,{
+        ...defaultFetchOpts(),
+    })
 		.then(response => response.json())
-		.catch(error => console.log(error))
+		.catch(error => console.error(error))
 }
 
 function startRace(id) {
-	console.log("step 3: start the race - there is a problem here with the api")
-	console.log("step 3: start the race - attempting reducing id by 1 but results seem spotty")
-	const bugfixID = id - 1
 	//https://knowledge.udacity.com/questions/357528
-	return fetch(`${SERVER}/api/races/${bugfixID}/start`, {
+	return fetch(`${SERVER}/api/races/${id}/start`, {
 		method: 'POST',
 		...defaultFetchOpts(),
 	})
-	.then(res => res.json())
-	.catch(err => console.log("Problem with startRace request::", err))
+	.catch(err => console.error("Problem with startRace request::", err))
 }
 
 function accelerate(id) {
 	// POST request to `${SERVER}/api/races/${id}/accelerate`
 	// options parameter provided as defaultFetchOpts
 	// no body or datatype needed for this request
-	const bugfixID = id - 1
 	//https://knowledge.udacity.com/questions/357528
-	return fetch(`${SERVER}/api/races/${bugfixID}/accelerate`, {
+	return fetch(`${SERVER}/api/races/${id}/accelerate`, {
 		method: 'POST',
 		...defaultFetchOpts(),
 	})
-	.then(res => res.json())
-	.catch(err => console.log("Problem with accelerate request::", err))
+	.catch(err => console.error("Problem with accelerate request::", err))
 }
