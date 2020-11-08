@@ -113,6 +113,8 @@ function runRace(raceID) {
 					}
 					if (race.status === 'finished') {
 						renderAt('#race', resultsView(race.positions))
+						// hide the progress display
+						document.getElementById('raceTracks').style.display = "none"
 						resolve(clearInterval(raceInterval))
 					}
 				})
@@ -285,7 +287,6 @@ function renderRaceStartView(track, racers) {
 
 function resultsView(positions) {
 	positions.sort((a, b) => (a.final_position > b.final_position) ? 1 : -1)
-
 	return `
 		<header>
 			<h1>Race Results</h1>
@@ -304,16 +305,28 @@ function raceProgress(positions) {
 	positions = positions.sort((a, b) => (a.segment > b.segment) ? -1 : 1)
 	let count = 1
 
+
 	const results = positions.map(p => {
 		return `
 			<h3>${count++} - ${p.driver_name}</h3>
 		`
 	}).join('')
+	const positionPerc = positions.map(p => {
+		let completion = p.segment/201
+		completionPercentage = Math.round(completion*100)
+		let thePosition = `bottom:${completionPercentage}px`
+		return `
+			<span class="posPod"><span class="thePod" style="${thePosition}"></span></span>
+		`
+	}).join('')
 	return `
+		<h3>Leaderboard</h3>
 		<main>
-			<h3>Leaderboard</h3>
-			<section id="leaderBoard">
+			<section id="leaderBoardSection">
 				${results}
+			</section>
+			<section id="raceTracks">
+				${positionPerc}
 			</section>
 		</main>
 	`
