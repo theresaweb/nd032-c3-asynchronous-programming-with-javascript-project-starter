@@ -79,7 +79,7 @@ async function handleCreateRace() {
 	  alert(`Select a track and racer`);
 	  return;
 	}
-	renderAt('#race', renderRaceStartView(store.track_id))
+	//renderAt('#race', renderRaceStartView(store.track_id))
 	// TODO - Get player_id and track_id from the store
 	const player_id = store.player_id
 	const track_id = store.track_id
@@ -88,6 +88,7 @@ async function handleCreateRace() {
 		const race = await createRace(player_id, track_id)
 		// TODO - update the store with the race id
 		store.race_id = parseInt(race.ID) - 1
+		renderAt('#race', renderRaceStartView(track_id))
 		// The race has been created, now start the countdown
 		// TODO - call the async function runCountdown
 		await runCountdown()
@@ -363,8 +364,6 @@ const getRacers = () => {
 }
 
 function createRace(player_id, track_id) {
-	player_id = parseInt(player_id)
-	track_id = parseInt(track_id)
 	const body = { player_id, track_id }
 
 	return fetch(`${SERVER}/api/races`, {
