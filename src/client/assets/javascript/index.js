@@ -210,7 +210,6 @@ function renderRacerCars(racers) {
 	}
 
 	const results = racers.map(renderRacerCard).join('')
-
 	return `
 		<ul id="racers">
 			${results}
@@ -224,9 +223,9 @@ function renderRacerCard(racer) {
 	return `
 		<li class="card podracer" id="${id}">
 			<h3>${driver_name}</h3>
-			<p>${top_speed}</p>
-			<p>${acceleration}</p>
-			<p>${handling}</p>
+			<p>Top Speed: ${top_speed}</p>
+			<p>Acceleration: ${acceleration}</p>
+			<p>Handling: ${handling}</p>
 		</li>
 	`
 }
